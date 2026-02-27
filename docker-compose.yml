@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: ./backend
+    container_name: ats_backend
+    ports:
+      - "5055:5055"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - ats_network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5055/api
+    container_name: ats_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - ats_network
+
+networks:
+  ats_network:
+    driver: bridge
