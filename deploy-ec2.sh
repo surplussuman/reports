@@ -45,7 +45,7 @@ echo "[5/5] Creating environment file..."
 cat > .env << 'EOF'
 MONGO_URI=mongodb://admin:bBgd1nWdaWrvO14zLsMHx1RL6zgDbjU4@52.65.157.15:27017/times_ai_interviewer?authSource=admin
 PORT=5055
-EOF
+EOF 
 
 # 6. Build and run
 echo "Building and starting containers..."

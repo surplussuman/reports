@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const atsRoutes = require('./routes/atsRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
+const { authRouter, authMiddleware } = require('./routes/authRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -13,9 +14,12 @@ const PORT = process.env.PORT || 5055;
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api', atsRoutes);
-app.use('/api', reportsRoutes);
+// Public routes (auth)
+app.use('/api', authRouter);
+
+// Protected routes
+app.use('/api', authMiddleware, atsRoutes);
+app.use('/api', authMiddleware, reportsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

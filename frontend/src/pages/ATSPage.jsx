@@ -3,9 +3,11 @@ import StatsCards from '../components/StatsCards';
 import FilterBar from '../components/FilterBar';
 import StudentTable from '../components/StudentTable';
 import StudentDetailModal from '../components/StudentDetailModal';
+import ExportDropdown from '../components/ExportDropdown';
 import Loader from '../components/Loader';
 import { fetchSRMStudents, fetchSRMCount, fetchSRMStats } from '../services/api';
-import { HiOutlineSparkles, HiOutlineDownload } from 'react-icons/hi';
+import { exportATSToPDF, exportATSToExcel, exportATSToCSV } from '../utils/exportUtils';
+import { HiOutlineSparkles } from 'react-icons/hi';
 
 const ATSPage = () => {
   const [students, setStudents] = useState([]);
@@ -85,23 +87,6 @@ const ATSPage = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handleExport = () => {
-    const headers = ['Name', 'Email', 'ATS Score'];
-    const rows = filteredStudents.map((s) => [
-      s.candidateName || '',
-      s.candidateEmail || '',
-      s.analysis?.atsScore || 0,
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ats_reports_srm.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <>
       {/* Top Header */}
@@ -118,14 +103,12 @@ const ATSPage = () => {
               <p className="text-sm text-gray-500">Comprehensive candidate evaluation dashboard</p>
             </div>
           </div>
-          <button
-            onClick={handleExport}
-            disabled={filteredStudents.length === 0}
-            className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-purple to-brand-indigo text-white text-sm font-medium hover:shadow-lg hover:shadow-brand-purple/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <HiOutlineDownload className="w-4 h-4" />
-            Export Report
-          </button>
+          <ExportDropdown
+            onExportPDF={() => exportATSToPDF(filteredStudents, students)}
+            onExportExcel={() => exportATSToExcel(filteredStudents, students)}
+            onExportCSV={() => exportATSToCSV(filteredStudents, students)}
+            disabled={students.length === 0}
+          />
         </div>
       </header>
 

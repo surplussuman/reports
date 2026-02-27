@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   HiOutlineDocumentReport,
   HiOutlineClipboardList,
   HiOutlineMenu,
   HiOutlineX,
+  HiOutlineLogout,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -17,6 +19,7 @@ const Sidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
   return (
     <>
@@ -87,6 +90,22 @@ const Sidebar = () => {
             );
           })}
         </nav>
+
+        {/* Logout */}
+        <div className="px-3 py-3 border-t border-white/10">
+          {!collapsed && user && (
+            <div className="px-3 py-2 mb-2">
+              <p className="text-xs text-gray-400 truncate">{user.name}</p>
+            </div>
+          )}
+          <button
+            onClick={() => { logout(); navigate('/login'); }}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
+          >
+            <HiOutlineLogout size={22} className="flex-shrink-0" />
+            {!collapsed && <span>Logout</span>}
+          </button>
+        </div>
 
         {/* Collapse toggle */}
         <button
