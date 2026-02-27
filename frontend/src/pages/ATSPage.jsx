@@ -103,12 +103,12 @@ const ATSPage = () => {
               <p className="text-sm text-gray-500">Comprehensive candidate evaluation dashboard</p>
             </div>
           </div>
-          <ExportDropdown
+          {/* <ExportDropdown
             onExportPDF={() => exportATSToPDF(filteredStudents, students)}
             onExportExcel={() => exportATSToExcel(filteredStudents, students)}
             onExportCSV={() => exportATSToCSV(filteredStudents, students)}
             disabled={students.length === 0}
-          />
+          /> */}
         </div>
       </header>
 

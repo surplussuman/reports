@@ -3,9 +3,9 @@ const router = express.Router();
 
 // Hardcoded credentials
 const VALID_USER = {
-  username: 'timeadmin',
-  password: 'Time@2026#Reports',
-  name: 'T.I.M.E Admin',
+  username: 'admin',
+  password: 'admin123',
+  name: 'Administrator',
 };
 
 // Simple token (base64 encoded, no external JWT library needed)
