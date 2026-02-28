@@ -7,14 +7,14 @@ const getScoreColor = (score) => {
   return { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' };
 };
 
-const StudentTable = ({ students, currentPage, setCurrentPage, totalPages, onViewDetails }) => {
+const StudentTable = ({ students, currentPage, setCurrentPage, totalPages, onViewDetails, totalCount, itemsPerPage = 100 }) => {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in">
       {/* Header */}
       <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Student ATS Reports</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{students.length} students found</p>
+          <p className="text-sm text-gray-500 mt-0.5">{totalCount !== undefined ? totalCount : students.length} students found</p>
         </div>
       </div>
 
@@ -34,7 +34,7 @@ const StudentTable = ({ students, currentPage, setCurrentPage, totalPages, onVie
             {students.map((student, idx) => {
               const score = student.analysis?.atsScore || 0;
               const color = getScoreColor(score);
-              const globalIdx = (currentPage - 1) * 10 + idx + 1;
+              const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
 
               return (
                 <tr

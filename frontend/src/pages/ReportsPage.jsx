@@ -27,6 +27,7 @@ const getStatusBadge = (status) => {
   if (status === 'shortlisted') return { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Shortlisted' };
   if (status === 'completed') return { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Completed' };
   if (status === 'pending') return { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Pending' };
+  if (status === 'rejected') return { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected' };
   return { bg: 'bg-gray-100', text: 'text-gray-700', label: status || 'Unknown' };
 };
 
@@ -39,14 +40,24 @@ const ReportsPage = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [minScore, setMinScore] = useState(0);
+  const [maxScore, setMaxScore] = useState(100);
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [sortBy, setSortBy] = useState('overall_score');
+  const [sortDir, setSortDir] = useState('desc');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  const ITEMS_PER_PAGE = 100;
+
+  const handleSort = (key) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortBy(key);
+      setSortDir('desc');
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -85,8 +96,8 @@ const ReportsPage = () => {
       );
     }
 
-    if (minScore > 0) {
-      result = result.filter((r) => (r.overall_score || 0) >= minScore);
+    if (maxScore < 100) {
+      result = result.filter((r) => (r.overall_score || 0) <= maxScore);
     }
 
     if (statusFilter !== 'all') {
@@ -111,22 +122,25 @@ const ReportsPage = () => {
 
     // Sort
     result.sort((a, b) => {
-      if (sortBy === 'overall_score') return (b.overall_score || 0) - (a.overall_score || 0);
-      if (sortBy === 'communication') return (b.communication || 0) - (a.communication || 0);
-      if (sortBy === 'questions') return (b.questions_count || 0) - (a.questions_count || 0);
-      if (sortBy === 'date') return new Date(b.completed_at || 0) - new Date(a.completed_at || 0);
-      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'duration') {
+      let cmp = 0;
+      if (sortBy === 'overall_score') cmp = (b.overall_score || 0) - (a.overall_score || 0);
+      else if (sortBy === 'communication') cmp = (b.communication || 0) - (a.communication || 0);
+      else if (sortBy === 'questions') cmp = (b.questions_count || 0) - (a.questions_count || 0);
+      else if (sortBy === 'date') cmp = new Date(b.completed_at || 0) - new Date(a.completed_at || 0);
+      else if (sortBy === 'name') cmp = (a.name || '').localeCompare(b.name || '');
+      else if (sortBy === 'role') cmp = (a.role || '').localeCompare(b.role || '');
+      else if (sortBy === 'status') cmp = (a.status || '').localeCompare(b.status || '');
+      else if (sortBy === 'duration') {
         const parseDur = (d) => { if (!d) return 0; const m = d.match(/(\d+)/); return m ? parseInt(m[1]) : 0; };
-        return parseDur(b.duration) - parseDur(a.duration);
+        cmp = parseDur(b.duration) - parseDur(a.duration);
       }
-      return 0;
+      return sortDir === 'asc' ? -cmp : cmp;
     });
 
     return result;
   }, [reports, searchTerm, minScore, statusFilter, roleFilter, sortBy]);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, minScore, statusFilter, roleFilter, sortBy, dateFrom, dateTo]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, maxScore, statusFilter, roleFilter, sortBy, sortDir, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -171,11 +185,11 @@ const ReportsPage = () => {
         <div className="flex items-center gap-2 mb-4">
           <HiOutlineAdjustments className="w-5 h-5 text-brand-purple" />
           <h2 className="text-base font-semibold text-gray-900">Filters & Sort</h2>
-          {(searchTerm || minScore > 0 || statusFilter !== 'all' || roleFilter !== 'all' || dateFrom || dateTo) && (
-            <button onClick={() => { setSearchTerm(''); setMinScore(0); setStatusFilter('all'); setRoleFilter('all'); setDateFrom(''); setDateTo(''); }} className="ml-auto text-xs text-brand-purple hover:text-brand-violet font-medium">Clear All</button>
+          {(searchTerm || maxScore < 100 || statusFilter !== 'all' || roleFilter !== 'all' || dateFrom || dateTo) && (
+            <button onClick={() => { setSearchTerm(''); setMaxScore(100); setStatusFilter('all'); setRoleFilter('all'); setDateFrom(''); setDateTo(''); }} className="ml-auto text-xs text-brand-purple hover:text-brand-violet font-medium">Clear All</button>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search */}
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">Search</label>
@@ -194,6 +208,7 @@ const ReportsPage = () => {
               <option value="shortlisted">Shortlisted</option>
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
           {/* Role */}
@@ -203,19 +218,6 @@ const ReportsPage = () => {
               className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-brand-purple outline-none text-sm bg-white">
               <option value="all">All Roles</option>
               {roles.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          {/* Sort */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Sort By</label>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-brand-purple outline-none text-sm bg-white">
-              <option value="overall_score">Overall Score</option>
-              <option value="communication">Communication</option>
-              <option value="questions">Questions Count</option>
-              <option value="date">Latest First</option>
-              <option value="duration">Longest Duration</option>
-              <option value="name">Name (A-Z)</option>
             </select>
           </div>
         </div>
@@ -232,8 +234,8 @@ const ReportsPage = () => {
               className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 outline-none text-sm" />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Min Score: <span className="text-brand-purple font-bold">{minScore}%</span></label>
-            <input type="range" min="0" max="100" value={minScore} onChange={(e) => setMinScore(Number(e.target.value))}
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Max Score: <span className="text-brand-purple font-bold">{maxScore}%</span></label>
+            <input type="range" min="0" max="100" value={maxScore} onChange={(e) => setMaxScore(Number(e.target.value))}
               className="w-full h-2 rounded-full appearance-none cursor-pointer mt-2
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer
@@ -261,14 +263,30 @@ const ReportsPage = () => {
             <thead>
               <tr className="bg-gray-50/80">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rank</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Candidate</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Communication</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Questions</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
+                {[{ label: 'Candidate', key: 'name' }, { label: 'Role', key: 'role' }].map(({ label, key }) => (
+                  <th key={key} onClick={() => handleSort(key)}
+                    className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
+                    <span className="inline-flex items-center gap-1">{label}
+                      {sortBy === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="opacity-30"> ↕</span>}
+                    </span>
+                  </th>
+                ))}
+                {[{ label: 'Overall', key: 'overall_score' }, { label: 'Communication', key: 'communication' }, { label: 'Questions', key: 'questions' }, { label: 'Date', key: 'date' }].map(({ label, key }) => (
+                  <th key={key} onClick={() => handleSort(key)}
+                    className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
+                    <span className="inline-flex items-center gap-1 justify-center">{label}
+                      {sortBy === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="opacity-30"> ↕</span>}
+                    </span>
+                  </th>
+                ))}
+                {[{ label: 'Status', key: 'status' }, { label: 'Duration', key: 'duration' }].map(({ label, key }) => (
+                  <th key={key} onClick={() => handleSort(key)}
+                    className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
+                    <span className="inline-flex items-center gap-1 justify-center">{label}
+                      {sortBy === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="opacity-30"> ↕</span>}
+                    </span>
+                  </th>
+                ))}
                 <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -278,6 +296,10 @@ const ReportsPage = () => {
                 const color = getScoreColor(report.overall_score || 0);
                 const statusBadge = getStatusBadge(report.status);
                 const completedDate = report.completed_at ? new Date(report.completed_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+
+                const realQCount = report.interview_data
+                  ? report.interview_data.filter((q) => q.isRealQuestion).length
+                  : (report.questions_count || 0);
 
                 return (
                   <tr key={report._id || idx} className="hover:bg-gray-50/50 transition-colors group">
@@ -311,7 +333,7 @@ const ReportsPage = () => {
                       <span className="text-sm font-medium text-gray-700">{report.communication || 0}%</span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
-                      <span className="text-sm font-medium text-gray-600">{report.questions_count || 0}</span>
+                      <span className="text-sm font-medium text-gray-600">{realQCount}</span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span className="text-xs text-gray-500">{completedDate}</span>

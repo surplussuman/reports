@@ -4,8 +4,8 @@ import { HiOutlineSearch, HiOutlineAdjustments } from 'react-icons/hi';
 const FilterBar = ({
   searchTerm,
   setSearchTerm,
-  minScore,
-  setMinScore,
+  maxScore,
+  setMaxScore,
   activeFilter,
   setActiveFilter,
 }) => {
@@ -22,11 +22,11 @@ const FilterBar = ({
       <div className="flex items-center gap-2 mb-5">
         <HiOutlineAdjustments className="w-5 h-5 text-brand-purple" />
         <h2 className="text-lg font-semibold text-gray-900">Filter Options</h2>
-        {(searchTerm || minScore > 0 || activeFilter !== 'all') && (
+        {(searchTerm || maxScore < 100 || activeFilter !== 'all') && (
           <button
             onClick={() => {
               setSearchTerm('');
-              setMinScore(0);
+              setMaxScore(100);
               setActiveFilter('all');
             }}
             className="ml-auto text-sm text-brand-purple hover:text-brand-violet font-medium transition-colors"
@@ -73,7 +73,7 @@ const FilterBar = ({
         {/* Min Score Slider */}
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-2">
-            Minimum ATS Score: <span className="text-brand-purple font-bold">{minScore}%</span>
+            Maximum ATS Score: <span className="text-brand-purple font-bold">{maxScore}%</span>
           </label>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-400 font-medium">0</span>
@@ -81,8 +81,8 @@ const FilterBar = ({
               type="range"
               min="0"
               max="100"
-              value={minScore}
-              onChange={(e) => setMinScore(Number(e.target.value))}
+              value={maxScore}
+              onChange={(e) => setMaxScore(Number(e.target.value))}
               className="flex-1 h-2 rounded-full appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none
                 [&::-webkit-slider-thumb]:w-5

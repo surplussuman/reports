@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import StatsCards from '../components/StatsCards';
 import FilterBar from '../components/FilterBar';
 import StudentTable from '../components/StudentTable';
-import StudentDetailModal from '../components/StudentDetailModal';
 import ExportDropdown from '../components/ExportDropdown';
 import Loader from '../components/Loader';
 import { fetchSRMStudents, fetchSRMCount, fetchSRMStats } from '../services/api';
@@ -18,13 +17,13 @@ const ATSPage = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [minScore, setMinScore] = useState(0);
+  const [maxScore, setMaxScore] = useState(100);
   const [activeFilter, setActiveFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 100;
 
   // Detail modal
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  // Removed: selectedStudent state & modal — View Details now opens /ats/:id in a new tab
 
   useEffect(() => {
     loadData();
@@ -61,8 +60,8 @@ const ATSPage = () => {
           (s.candidateEmail || '').toLowerCase().includes(term)
       );
     }
-    if (minScore > 0) {
-      result = result.filter((s) => (s.analysis?.atsScore || 0) >= minScore);
+    if (maxScore < 100) {
+      result = result.filter((s) => (s.analysis?.atsScore || 0) <= maxScore);
     }
     if (activeFilter === 'high') {
       result = result.filter((s) => (s.analysis?.atsScore || 0) >= 80);
@@ -79,7 +78,7 @@ const ATSPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, minScore, activeFilter]);
+  }, [searchTerm, maxScore, activeFilter]);
 
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
   const paginatedStudents = filteredStudents.slice(
@@ -138,29 +137,25 @@ const ATSPage = () => {
             <FilterBar
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
-              minScore={minScore}
-              setMinScore={setMinScore}
+              maxScore={maxScore}
+              setMaxScore={setMaxScore}
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
             />
             <StudentTable
               students={paginatedStudents}
+              totalCount={filteredStudents.length}
+              itemsPerPage={ITEMS_PER_PAGE}
               currentPage={currentPage}
               setCurrentPage={setCurrentPage}
               totalPages={totalPages}
-              onViewDetails={setSelectedStudent}
+              onViewDetails={(s) => window.open('/ats/' + s._id, '_blank')}
             />
           </>
         )}
       </div>
 
-      {/* Detail Modal */}
-      {selectedStudent && (
-        <StudentDetailModal
-          student={selectedStudent}
-          onClose={() => setSelectedStudent(null)}
-        />
-      )}
+      {/* Detail Modal removed — now opens ATSDetailPage in a new tab */}
     </>
   );
 };

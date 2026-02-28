@@ -126,7 +126,7 @@ const ReportDetailPage = () => {
                 <span className="text-sm">{report.duration || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2 text-white/70">
-                <span className="text-sm">{report.questions_count || 0} Questions</span>
+                <span className="text-sm">{realQuestions.length} Questions</span>
               </div>
             </div>
           </div>
@@ -151,11 +151,9 @@ const ReportDetailPage = () => {
           {/* Main Scores */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <h3 className="text-base font-semibold text-gray-900 mb-6">Performance Scores</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-6">
               <ScoreRing score={report.overall_score || 0} label="Overall" size={90} />
-              <ScoreRing score={report.technical || 0} label="Technical" size={90} />
               <ScoreRing score={report.communication || 0} label="Communication" size={90} />
-              <ScoreRing score={report.behavioral || 0} label="Behavioral" size={90} />
             </div>
           </div>
 
@@ -207,7 +205,7 @@ const ReportDetailPage = () => {
                         <p className="text-sm font-medium text-gray-900">{qa.question}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs bg-brand-light text-brand-purple px-2 py-1 rounded-md capitalize">{qa.templateCategory || 'general'}</span>
+                        <span className="text-xs bg-brand-light text-brand-purple px-2 py-1 rounded-md capitalize">{qa.category || qa.templateCategory || 'general'}</span>
                         {fb.overallScore > 0 && (
                           <span className={`text-xs px-2 py-1 rounded-md font-bold ${getScoreColor(fb.overallScore * 10).bg} ${getScoreColor(fb.overallScore * 10).text}`}>
                             {fb.overallScore}/10
@@ -284,13 +282,11 @@ const ReportDetailPage = () => {
               { label: 'Exam Type', value: report.exam_name },
               { label: 'Role', value: report.role },
               { label: 'Subcategory', value: report.subcategory_name },
-              { label: 'Template', value: report.template_number ? `Template ${report.template_number}` : 'N/A' },
-              { label: 'Questions Count', value: report.questions_count },
+              { label: 'Questions Count', value: realQuestions.length },
               { label: 'Duration', value: report.duration },
               { label: 'Status', value: report.status },
               { label: 'Started At', value: report.started_at ? new Date(report.started_at).toLocaleString() : 'N/A' },
               { label: 'Completed At', value: report.completed_at ? new Date(report.completed_at).toLocaleString() : 'N/A' },
-              { label: 'Phone', value: report.phone || 'N/A' },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
                 <span className="text-sm text-gray-500">{item.label}</span>

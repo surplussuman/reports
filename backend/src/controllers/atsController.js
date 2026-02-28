@@ -33,7 +33,6 @@ const getSRMStudents = async (req, res, next) => {
       }
     )
       .sort({ 'analysis.atsScore': -1 })
-      .limit(200)
       .lean();
 
     res.json({ success: true, count: students.length, data: students });
@@ -117,4 +116,18 @@ const getColleges = async (req, res, next) => {
   }
 };
 
-module.exports = { getSRMStudents, getSRMCount, getSRMStats, getColleges };
+// GET /api/ats/detail/:id — Full ATS detail for a single student
+const getATSDetail = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const student = await ResumeAnalysis.findById(id).lean();
+    if (!student) {
+      return res.status(404).json({ success: false, error: 'Student not found' });
+    }
+    res.json({ success: true, data: student });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getSRMStudents, getSRMCount, getSRMStats, getColleges, getATSDetail };

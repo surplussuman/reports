@@ -44,6 +44,11 @@ export const fetchSRMReportCount = async () => {
   return data;
 };
 
+export const fetchATSDetail = async (id) => {
+  const { data } = await api.get(`/ats/detail/${id}`);
+  return data;
+};
+
 export const fetchReportDetail = async (id) => {
   const { data } = await api.get(`/reports/detail/${id}`);
   return data;
