@@ -3,3 +3,4 @@ node_modules
 dist
 build
 deploy-ec2.sh
+docker-compose.override.yml

@@ -37,6 +37,7 @@ const getSRMReports = async (req, res, next) => {
         started_at: 1,
         completed_at: 1,
         template_number: 1,
+        interview_data: 1,
       }
     )
       .sort({ overall_score: -1 })

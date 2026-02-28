@@ -219,7 +219,7 @@ const ReportDetailPage = () => {
                   {/* Answer */}
                   <div className="px-6 py-4">
                     <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-4">
-                      <p className="text-xs font-medium text-blue-600 mb-1">Answer ({qa.responseType || 'spoken'})</p>
+                      <p className="text-xs font-medium text-blue-600 mb-1">Answer </p>
                       <p className="text-sm text-gray-700 leading-relaxed">{qa.answer || 'No answer provided'}</p>
                     </div>
 

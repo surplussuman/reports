@@ -14,10 +14,11 @@ export const exportATSToExcel = (students, allStudents) => {
     'Name': s.candidateName || '',
     'Email': s.candidateEmail || '',
     'ATS Score': s.analysis?.atsScore || 0,
-    'AI Summary': s.analysis?.summary || '',
+    'AI Summary': s.analysis?.comprehensiveSummary || s.analysis?.summary || '',
+    'Analyzed At': s.analyzedAt ? new Date(s.analyzedAt).toLocaleDateString('en-IN') : '',
   }));
   const ws1 = XLSX.utils.json_to_sheet(summaryRows);
-  ws1['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 35 }, { wch: 12 }, { wch: 60 }];
+  ws1['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 35 }, { wch: 12 }, { wch: 60 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, ws1, 'ATS Summary');
 
   // Sheet 2: Skills & Education
@@ -62,15 +63,16 @@ export const exportATSToExcel = (students, allStudents) => {
       'Name': s.candidateName || '',
       'ATS Score': s.analysis?.atsScore || 0,
       'Strengths': (s.analysis?.strengths || []).join('; '),
-      'Improvements': (s.analysis?.improvements || []).join('; '),
-      'Grammar Feedback': fb.grammar || '',
+      'Improvements': (s.analysis?.areasForImprovement || s.analysis?.improvements || []).join('; '),
+      'Grammar Feedback': fb.grammar || fb.grammarFeedback || '',
+      'Professional Summary': s.analysis?.comprehensiveSummary || s.structuredData?.professionalSummary || '',
       'ATS Compatibility': fb.atsCompatibility || '',
       'Content Quality': fb.contentQuality || '',
       'Formatting': fb.formatting || '',
     };
   });
   const ws4 = XLSX.utils.json_to_sheet(fbRows);
-  ws4['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 40 }];
+  ws4['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 40 }, { wch: 60 }, { wch: 40 }, { wch: 40 }, { wch: 40 }];
   XLSX.utils.book_append_sheet(wb, ws4, 'Detailed Feedback');
 
   XLSX.writeFile(wb, `ATS_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -98,7 +100,7 @@ export const exportATSToPDF = (students, allStudents) => {
       s.candidateEmail || '',
       `${s.analysis?.atsScore || 0}%`,
       (s.analysis?.strengths || []).slice(0, 2).join('; ') || '-',
-      (s.analysis?.improvements || []).slice(0, 2).join('; ') || '-',
+      (s.analysis?.areasForImprovement || s.analysis?.improvements || []).slice(0, 2).join('; ') || '-',
     ]),
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [107, 78, 255], textColor: 255, fontStyle: 'bold' },
@@ -150,10 +152,10 @@ export const exportATSToCSV = (students, allStudents) => {
     `"${(s.candidateName || '').replace(/"/g, '""')}"`,
     s.candidateEmail || '',
     s.analysis?.atsScore || 0,
-    `"${(s.analysis?.summary || '').replace(/"/g, '""')}"`,
+    `"${(s.analysis?.comprehensiveSummary || s.analysis?.summary || '').replace(/"/g, '""')}"`,
     `"${(s.analysis?.skills || []).join(', ')}"`,
     `"${(s.analysis?.strengths || []).join('; ')}"`,
-    `"${(s.analysis?.improvements || []).join('; ')}"`,
+    `"${(s.analysis?.areasForImprovement || s.analysis?.improvements || []).join('; ')}"`,    
   ]);
   const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   downloadBlob(csv, 'text/csv', `ATS_Report_${new Date().toISOString().slice(0, 10)}.csv`);
@@ -183,23 +185,28 @@ export const exportReportsToExcel = (reports, allReports) => {
   ws1['!cols'] = [{ wch: 6 }, { wch: 30 }, { wch: 35 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, ws1, 'Interview Summary');
 
-  // Sheet 2: Detailed Scores (per-question analysis)
+  // Sheet 2: Detailed Q&A Transcript
   const detailRows = [];
   data.forEach((r) => {
-    const questions = (r.interview_data || []).filter((q) => q.isRealQuestion);
+    const allQuestions = r.interview_data || [];
+    const questions = allQuestions.filter((q) => q.isRealQuestion);
     if (questions.length === 0) {
       detailRows.push({
         'Candidate': r.name || '',
         'Email': r.email || '',
-        'Question #': '-',
-        'Category': '-',
-        'Question': '-',
-        'Answer': '-',
-        'Overall': r.overall_score || 0,
-        'Confidence': '-',
-        'Ideas': '-',
-        'Grammar': '-',
-        'Content Feedback': '-',
+        'Role': r.role || '',
+        'Question #': 'No transcript available',
+        'Category': '',
+        'Question': '',
+        'Answer': '',
+        'Overall/Q': '',
+        'Confidence': '',
+        'Ideas': '',
+        'Organization': '',
+        'Accuracy': '',
+        'Voice': '',
+        'Grammar': '',
+        'Content Feedback': '',
       });
     } else {
       questions.forEach((q, qi) => {
@@ -207,21 +214,25 @@ export const exportReportsToExcel = (reports, allReports) => {
         detailRows.push({
           'Candidate': r.name || '',
           'Email': r.email || '',
+          'Role': r.role || '',
           'Question #': qi + 1,
-          'Category': q.templateCategory || '',
+          'Category': q.templateCategory || q.category || '',
           'Question': q.question || '',
           'Answer': q.answer || '',
-          'Overall': fb.overallScore || 0,
+          'Overall/Q': fb.overallScore || 0,
           'Confidence': fb.confidenceScore || 0,
           'Ideas': fb.ideasScore || 0,
+          'Organization': fb.organizationScore || 0,
+          'Accuracy': fb.accuracyScore || 0,
+          'Voice': fb.voiceScore || 0,
           'Grammar': fb.grammarScore || 0,
-          'Content Feedback': fb.contentFeedback || '',
+          'Content Feedback': fb.contentFeedback || fb.feedback || '',
         });
       });
     }
   });
   const ws2 = XLSX.utils.json_to_sheet(detailRows);
-  ws2['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 50 }, { wch: 60 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 50 }];
+  ws2['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 18 }, { wch: 10 }, { wch: 16 }, { wch: 55 }, { wch: 65 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 55 }];
   XLSX.utils.book_append_sheet(wb, ws2, 'Detailed Q&A Analysis');
 
   // Sheet 3: Score Breakdown
@@ -229,13 +240,18 @@ export const exportReportsToExcel = (reports, allReports) => {
     const questions = (r.interview_data || []).filter((q) => q.isRealQuestion);
     const avgScore = (field) => {
       const vals = questions.map((q) => q.feedback?.[field] || 0).filter((v) => v > 0);
-      return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : 0;
+      return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '-';
     };
     return {
       'Name': r.name || '',
+      'Email': r.email || '',
+      'Role': r.role || '',
       'Overall Score': r.overall_score || 0,
       'Communication': r.communication || 0,
       'Status': r.status || '',
+      'Questions Count': r.questions_count || questions.length || 0,
+      'Duration': r.duration || '',
+      'Date': r.completed_at ? new Date(r.completed_at).toLocaleDateString('en-IN') : '',
       'Avg Confidence': avgScore('confidenceScore'),
       'Avg Ideas': avgScore('ideasScore'),
       'Avg Organization': avgScore('organizationScore'),
@@ -246,7 +262,7 @@ export const exportReportsToExcel = (reports, allReports) => {
     };
   });
   const ws3 = XLSX.utils.json_to_sheet(breakdownRows);
-  ws3['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 15 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 }];
+  ws3['!cols'] = [{ wch: 30 }, { wch: 32 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 15 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, ws3, 'Score Breakdown');
 
   XLSX.writeFile(wb, `Interview_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);

@@ -249,12 +249,12 @@ const ReportsPage = () => {
             <h2 className="text-lg font-semibold text-gray-900">Interview Leaderboard</h2>
             <p className="text-sm text-gray-500">{filtered.length} interviews found</p>
           </div>
-          {/* <ExportDropdown
+          <ExportDropdown
             onExportPDF={() => exportReportsToPDF(filtered, reports)}
             onExportExcel={() => exportReportsToExcel(filtered, reports)}
             onExportCSV={() => exportReportsToCSV(filtered, reports)}
             disabled={reports.length === 0}
-          /> */}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
