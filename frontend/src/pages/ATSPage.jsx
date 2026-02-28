@@ -74,7 +74,7 @@ const ATSPage = () => {
       result = result.filter((s) => (s.analysis?.atsScore || 0) < 50);
     }
     return result;
-  }, [students, searchTerm, minScore, activeFilter]);
+  }, [students, searchTerm, maxScore, activeFilter]);
 
   useEffect(() => {
     setCurrentPage(1);

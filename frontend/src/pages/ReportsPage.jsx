@@ -138,7 +138,7 @@ const ReportsPage = () => {
     });
 
     return result;
-  }, [reports, searchTerm, minScore, statusFilter, roleFilter, sortBy]);
+  }, [reports, searchTerm, maxScore, statusFilter, roleFilter, sortBy]);
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, maxScore, statusFilter, roleFilter, sortBy, sortDir, dateFrom, dateTo]);
 
