@@ -3,8 +3,8 @@ const router = express.Router();
 
 // Hardcoded credentials
 const VALID_USER = {
-  username: 'admin',
-  password: 'admin123',
+  username: 'srmktr',
+  password: 'sk5Fe@y3Hqk',
   name: 'Administrator',
 };
 
