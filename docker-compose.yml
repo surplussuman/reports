@@ -24,4 +24,5 @@ services:
 
 networks:
   app-network:
+    name: ai_interviewer_app-network
     external: true
