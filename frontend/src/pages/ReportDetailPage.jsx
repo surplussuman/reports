@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchReportDetail } from '../services/api';
 import Loader from '../components/Loader';
-import { HiOutlineArrowLeft, HiOutlineClock } from 'react-icons/hi';
+import { exportReportDetailToPDF } from '../utils/exportUtils';
+import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineDownload } from 'react-icons/hi';
 
 const getScoreColor = (score) => {
   if (score >= 80) return { bg: 'bg-emerald-100', text: 'text-emerald-700', bar: 'bg-emerald-500' };
@@ -90,10 +91,19 @@ const ReportDetailPage = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Back button */}
-      <button onClick={() => navigate('/reports')} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-purple transition-colors">
-        <HiOutlineArrowLeft className="w-4 h-4" /> Back to Leaderboard
-      </button>
+      {/* Back button + Export */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate('/reports')} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-purple transition-colors">
+          <HiOutlineArrowLeft className="w-4 h-4" /> Back to Leaderboard
+        </button>
+        <button
+          onClick={() => exportReportDetailToPDF(report, realQuestions, avgFeedbackScores)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-brand-purple text-white hover:bg-brand-violet transition-all shadow-sm shadow-brand-purple/25"
+        >
+          <HiOutlineDownload className="w-4 h-4" />
+          Download PDF
+        </button>
+      </div>
 
       {/* Header Card */}
       <div className="bg-gradient-to-r from-sidebar-bg to-brand-purple rounded-2xl p-8 relative overflow-hidden">

@@ -355,6 +355,376 @@ export const exportReportsToCSV = (reports, allReports) => {
   downloadBlob(csv, 'text/csv', `Interview_Report_${new Date().toISOString().slice(0, 10)}.csv`);
 };
 
+// ========== SINGLE REPORT DETAIL PDF ==========
+
+export const exportReportDetailToPDF = (report, realQuestions, avgFeedbackScores) => {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210, pageH = 297, margin = 15, usable = pageW - margin * 2;
+  let y = 20;
+
+  // Colors
+  const purple = [79, 70, 229];
+  const purpleLight = [237, 233, 254];
+  const gray50 = [249, 250, 251];
+  const gray100 = [243, 244, 246];
+  const gray200 = [229, 231, 235];
+  const gray400 = [156, 163, 175];
+  const gray600 = [75, 85, 99];
+  const gray700 = [55, 65, 81];
+  const gray900 = [17, 24, 39];
+  const blue50 = [239, 246, 255];
+  const blue100 = [219, 234, 254];
+  const blue500 = [59, 130, 246];
+
+  const scoreColor = (v) =>
+    v >= 80 ? [16, 185, 129] : v >= 60 ? [59, 130, 246] : v >= 40 ? [245, 158, 11] : [239, 68, 68];
+  const scoreBg = (v) =>
+    v >= 80 ? [209, 250, 229] : v >= 60 ? [219, 234, 254] : v >= 40 ? [254, 243, 199] : [254, 226, 226];
+
+  const newPage = () => { doc.addPage(); y = 20; };
+  const checkBreak = (h = 20) => { if (y + h > pageH - 12) newPage(); };
+
+  // ── HEADER ──────────────────────────────────────────────────────────────
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...purple);
+  doc.text('AI Interview Reports', pageW / 2, y, { align: 'center' });
+  y += 7;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...gray400);
+  doc.text(`Generated on ${new Date().toLocaleString()}`, pageW / 2, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(...purple);
+  doc.setLineWidth(0.4);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  // ── CANDIDATE HEADER (purple bar) ────────────────────────────────────────
+  const hdrH = 22;
+  doc.setFillColor(...purple);
+  doc.roundedRect(margin, y, usable, hdrH, 3, 3, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text((report.name || 'Unknown').toUpperCase(), margin + 6, y + 9);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(210, 200, 255);
+  const meta = [report.interview_id, report.exam_name, report.role, report.status?.toUpperCase()]
+    .filter(Boolean).join(' | ');
+  doc.text(meta, margin + 6, y + 17);
+  y += hdrH + 4;
+
+  // ── SCORE BOXES ──────────────────────────────────────────────────────────
+  const scoreItems = [
+    { label: 'Overall', value: `${report.overall_score || 0}%`, num: report.overall_score || 0 },
+    ...(report.communication > 0 ? [{ label: 'Communication', value: report.communication, num: report.communication }] : []),
+    ...(report.technical > 0 ? [{ label: 'Technical', value: report.technical, num: report.technical }] : []),
+    ...(report.behavioral > 0 ? [{ label: 'Behavioral', value: report.behavioral, num: report.behavioral }] : []),
+  ];
+  const bh = 20;
+  const bw = (usable - (scoreItems.length - 1) * 3) / scoreItems.length;
+  scoreItems.forEach((s, i) => {
+    const bx = margin + i * (bw + 3);
+    doc.setFillColor(...gray50);
+    doc.setDrawColor(...gray200);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(bx, y, bw, bh, 2, 2, 'FD');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...gray400);
+    doc.text(s.label, bx + bw / 2, y + 6, { align: 'center' });
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...scoreColor(s.num));
+    doc.text(String(s.value), bx + bw / 2, y + 15, { align: 'center' });
+  });
+  y += bh + 4;
+
+  // ── INFO ROW ─────────────────────────────────────────────────────────────
+  const infoItems = [
+    report.plagiarism != null ? { l: 'Plagiarism', v: `${report.plagiarism}%` } : null,
+    report.authenticity != null ? { l: 'Authenticity', v: `${report.authenticity}` } : null,
+    report.duration ? { l: 'Duration', v: report.duration } : null,
+    report.email ? { l: 'Email', v: report.email } : null,
+  ].filter(Boolean);
+
+  if (infoItems.length > 0) {
+    const infoH = 12;
+    doc.setFillColor(...gray100);
+    doc.setDrawColor(...gray200);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, y, usable, infoH, 2, 2, 'FD');
+    const iw = usable / infoItems.length;
+    infoItems.forEach((item, i) => {
+      const ix = margin + i * iw + 4;
+      const iy = y + 7.5;
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...gray700);
+      doc.text(`${item.l}: `, ix, iy);
+      const lw = doc.getTextWidth(`${item.l}: `);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...gray600);
+      doc.text(item.v, ix + lw, iy);
+    });
+    y += infoH + 6;
+  }
+
+  // ── DETAILED ASSESSMENT ──────────────────────────────────────────────────
+  const scoreEntries = Object.entries(avgFeedbackScores).filter(([, v]) => v > 0);
+  if (scoreEntries.length > 0) {
+    checkBreak(30);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...gray900);
+    doc.text('Detailed Assessment', margin, y);
+    y += 6;
+    const cols = 3;
+    const sw = (usable - (cols - 1) * 3) / cols;
+    const sh = 10;
+    const rows = Math.ceil(scoreEntries.length / cols);
+    for (let row = 0; row < rows; row++) {
+      checkBreak(sh + 3);
+      for (let col = 0; col < cols; col++) {
+        const idx = row * cols + col;
+        if (idx >= scoreEntries.length) break;
+        const [key, val] = scoreEntries[idx];
+        const sx = margin + col * (sw + 3);
+        const label = key.replace('Score', '').replace(/([A-Z])/g, ' $1').trim();
+        const labelCap = label.charAt(0).toUpperCase() + label.slice(1);
+        doc.setFillColor(...gray50);
+        doc.setDrawColor(...gray200);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(sx, y, sw, sh, 1.5, 1.5, 'FD');
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...gray700);
+        doc.text(labelCap, sx + 4, y + 6.5);
+        // mini bar
+        const barX = sx + sw - 30;
+        doc.setFillColor(...gray200);
+        doc.roundedRect(barX, y + 3.5, 22, 3, 1, 1, 'F');
+        doc.setFillColor(...scoreColor(val));
+        doc.roundedRect(barX, y + 3.5, 22 * (val / 100), 3, 1, 1, 'F');
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...scoreColor(val));
+        doc.text(`${val}%`, sx + sw - 4, y + 6.5, { align: 'right' });
+      }
+      y += sh + 3;
+    }
+    y += 4;
+  }
+
+  // ── INTERVIEW TRANSCRIPTS ─────────────────────────────────────────────────
+  checkBreak(16);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray900);
+  doc.text(`Interview Transcripts (${realQuestions.length} question${realQuestions.length !== 1 ? 's' : ''})`, margin, y);
+  y += 8;
+
+  realQuestions.forEach((qa, idx) => {
+    const fb = qa.feedback || {};
+
+    // ─ Q Badge + Question ─
+    checkBreak(18);
+    // Badge
+    doc.setFillColor(...purple);
+    doc.roundedRect(margin, y, 9, 7.5, 1.5, 1.5, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Q${idx + 1}`, margin + 4.5, y + 5.2, { align: 'center' });
+
+    // Category pill
+    const catText = (qa.category || qa.templateCategory || 'general').toLowerCase();
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...purple);
+    const catW = doc.getTextWidth(catText) + 5;
+    const hasPill = fb.overallScore > 0;
+    const pillRight = hasPill ? margin + usable - 17 : margin + usable;
+    doc.setFillColor(...purpleLight);
+    doc.roundedRect(pillRight - catW, y, catW, 6.5, 1, 1, 'F');
+    doc.text(catText, pillRight - catW / 2, y + 4.7, { align: 'center' });
+
+    if (hasPill) {
+      const sv = fb.overallScore * 10;
+      doc.setFillColor(...scoreBg(sv));
+      doc.roundedRect(margin + usable - 13, y, 13, 6.5, 1, 1, 'F');
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...scoreColor(sv));
+      doc.text(`${fb.overallScore}/10`, margin + usable - 6.5, y + 4.7, { align: 'center' });
+    }
+
+    // Question text
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...gray900);
+    const qLines = doc.splitTextToSize(qa.question || '', usable - 14);
+    doc.text(qLines, margin + 11, y + 5.5);
+    y += Math.max(qLines.length * 5, 8) + 4;
+
+    // ─ Answer box ─
+    const ansText = qa.answer || 'No answer provided';
+    const ansLines = doc.splitTextToSize(ansText, usable - 10);
+    const ansH = ansLines.length * 4.5 + 9;
+    checkBreak(ansH + 6);
+    doc.setFillColor(...blue50);
+    doc.setDrawColor(...blue100);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, y, usable, ansH, 2, 2, 'FD');
+    // left accent bar
+    doc.setFillColor(...blue500);
+    doc.rect(margin, y, 2.5, ansH, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...blue500);
+    doc.text('Answer', margin + 5, y + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...gray700);
+    doc.text(ansLines, margin + 5, y + 10);
+    y += ansH + 3;
+
+    // ─ Feedback box ─
+    const fbParts = [
+      fb.contentFeedback ? `Content: ${fb.contentFeedback}` : null,
+      fb.clarityFeedback ? `Clarity: ${fb.clarityFeedback}` : null,
+      fb.toneFeedback ? `Tone: ${fb.toneFeedback}` : null,
+      fb.visualFeedback ? `Visual: ${fb.visualFeedback}` : null,
+    ].filter(Boolean);
+
+    if (fbParts.length > 0) {
+      const fbBodyText = fbParts.join(' | ');
+      // Render "Feedback: " prefix then body — compute first-line indent
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      const prefixW = doc.getTextWidth('Feedback: ');
+      const bodyLines = doc.splitTextToSize(fbBodyText, usable - 10 - prefixW);
+      // We'll put prefix on line1 + remaining wrapped from left
+      const fbAllLines = doc.splitTextToSize(fbBodyText, usable - 10);
+      const fbH = fbAllLines.length * 4.5 + 9;
+      checkBreak(fbH + 5);
+      doc.setFillColor(...purpleLight);
+      doc.setDrawColor(196, 181, 253);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, usable, fbH, 2, 2, 'FD');
+      // Bold "Feedback: " label
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...purple);
+      doc.text('Feedback:', margin + 5, y + 5.5);
+      // Normal body text starting after label on first line
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...gray600);
+      const firstLineBody = doc.splitTextToSize(fbBodyText, usable - 10 - prefixW)[0];
+      doc.text(firstLineBody, margin + 5 + prefixW, y + 5.5);
+      // Remaining lines from left
+      const fullLines = doc.splitTextToSize(fbBodyText, usable - 10);
+      if (fullLines.length > 1) {
+        doc.text(fullLines.slice(1), margin + 5, y + 5.5 + 4.5);
+      }
+      y += fbH + 3;
+    }
+
+    // ─ Score pills row ─
+    if (fb.overallScore > 0) {
+      const pillFields = [
+        { k: 'confidenceScore', l: 'Confidence' },
+        { k: 'ideasScore', l: 'Ideas' },
+        { k: 'organizationScore', l: 'Organization' },
+        { k: 'accuracyScore', l: 'Accuracy' },
+        { k: 'voiceScore', l: 'Voice' },
+        { k: 'grammarScore', l: 'Grammar' },
+      ].filter(({ k }) => fb[k] > 0);
+
+      if (pillFields.length > 0) {
+        checkBreak(10);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        let px = margin;
+        pillFields.forEach(({ k, l }) => {
+          const sv = fb[k] * 10;
+          const pillText = `${l}: ${fb[k]}/10`;
+          const pw = doc.getTextWidth(pillText) + 6;
+          if (px + pw > margin + usable) { px = margin; y += 8; checkBreak(8); }
+          doc.setFillColor(...scoreBg(sv));
+          doc.roundedRect(px, y, pw, 6.5, 1, 1, 'F');
+          doc.setTextColor(...scoreColor(sv));
+          doc.text(pillText, px + 3, y + 4.7);
+          px += pw + 3;
+        });
+        y += 9;
+      }
+    }
+
+    // ─ Score line ─
+    checkBreak(8);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...gray700);
+    doc.text(`Score: ${fb.overallScore > 0 ? `${fb.overallScore}/10` : 'N/A'}`, margin, y);
+    y += 5;
+
+    // Divider between questions
+    doc.setDrawColor(...gray200);
+    doc.setLineWidth(0.2);
+    doc.line(margin, y, pageW - margin, y);
+    y += 6;
+  });
+
+  // ── SESSION DETAILS ───────────────────────────────────────────────────────
+  checkBreak(20);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray900);
+  doc.text('Session Details', margin, y);
+  y += 6;
+
+  const detailItems = [
+    { label: 'Interview ID', value: report.interview_id },
+    { label: 'Candidate ID', value: report.candidate_id },
+    { label: 'Exam Type', value: report.exam_name },
+    { label: 'Role', value: report.role },
+    { label: 'Subcategory', value: report.subcategory_name },
+    { label: 'Questions Count', value: realQuestions.length },
+    { label: 'Duration', value: report.duration },
+    { label: 'Status', value: report.status },
+    { label: 'Started At', value: report.started_at ? new Date(report.started_at).toLocaleString() : 'N/A' },
+    { label: 'Completed At', value: report.completed_at ? new Date(report.completed_at).toLocaleString() : 'N/A' },
+  ];
+
+  const dw = (usable - 3) / 2;
+  const dh = 9;
+  for (let i = 0; i < detailItems.length; i += 2) {
+    checkBreak(dh + 3);
+    [detailItems[i], detailItems[i + 1]].forEach((item, col) => {
+      if (!item) return;
+      const dx = margin + col * (dw + 3);
+      doc.setFillColor(...gray50);
+      doc.setDrawColor(...gray200);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(dx, y, dw, dh, 1.5, 1.5, 'FD');
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...gray400);
+      doc.text(item.label, dx + 4, y + 5.8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...gray900);
+      doc.text(String(item.value || 'N/A'), dx + dw - 4, y + 5.8, { align: 'right' });
+    });
+    y += dh + 3;
+  }
+
+  const safeName = (report.name || 'candidate').replace(/\s+/g, '_');
+  doc.save(`Interview_Report_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`);
+};
+
 // Helper
 function downloadBlob(content, type, filename) {
   const blob = new Blob([content], { type });
