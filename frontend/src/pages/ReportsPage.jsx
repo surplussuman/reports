@@ -31,12 +31,18 @@ const getStatusBadge = (status) => {
   return { bg: 'bg-gray-100', text: 'text-gray-700', label: status || 'Unknown' };
 };
 
+// Module-level cache — survives component unmounts (back navigation)
+let _reportsCache = null;
+let _statsCache = null;
+
 const ReportsPage = () => {
   const navigate = useNavigate();
-  const [reports, setReports] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState(_reportsCache || []);
+  const [stats, setStats] = useState(_statsCache || null);
+  const [loading, setLoading] = useState(!_reportsCache);
   const [error, setError] = useState(null);
+  const [batchFilter, setBatchFilter] = useState('all');
+  const [codeFilter, setCodeFilter] = useState('all');
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +66,8 @@ const ReportsPage = () => {
   };
 
   useEffect(() => {
+    // If cache already exists, nothing to do — data and loading=false already set via useState init
+    if (_reportsCache) return;
     loadData();
   }, []);
 
@@ -70,8 +78,10 @@ const ReportsPage = () => {
         fetchSRMReports(),
         fetchSRMReportStats(),
       ]);
-      setReports(reportsRes.data || []);
-      setStats(statsRes.data || null);
+      _reportsCache = reportsRes.data || [];
+      _statsCache = statsRes.data || null;
+      setReports(_reportsCache);
+      setStats(_statsCache);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,15 +95,31 @@ const ReportsPage = () => {
     return Array.from(r).sort();
   }, [reports]);
 
+  // Batch names and codes for filters
+  const batchNames = useMemo(() => {
+    const s = new Set(reports.map((rep) => rep.batchName).filter(Boolean));
+    return Array.from(s).sort();
+  }, [reports]);
+
+  const batchCodes = useMemo(() => {
+    const s = new Set(reports.map((rep) => rep.batchCode).filter(Boolean));
+    return Array.from(s).sort();
+  }, [reports]);
+
   // Filter & sort
   const filtered = useMemo(() => {
     let result = [...reports];
 
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(
-        (r) => (r.name || '').toLowerCase().includes(term) || (r.email || '').toLowerCase().includes(term)
-      );
+      result = result.filter((r) => {
+        return (
+          (r.name || '').toLowerCase().includes(term) ||
+          (r.email || '').toLowerCase().includes(term) ||
+          (r.registrationNumber || '').toLowerCase().includes(term) ||
+          (r.timeId || '').toLowerCase().includes(term)
+        );
+      });
     }
 
     if (maxScore < 100) {
@@ -106,6 +132,14 @@ const ReportsPage = () => {
 
     if (roleFilter !== 'all') {
       result = result.filter((r) => r.role === roleFilter);
+    }
+
+    // Batch and code filters
+    if (batchFilter !== 'all') {
+      result = result.filter((r) => r.batchName === batchFilter);
+    }
+    if (codeFilter !== 'all') {
+      result = result.filter((r) => r.batchCode === codeFilter);
     }
 
     // Date filter
@@ -263,14 +297,22 @@ const ReportsPage = () => {
             <thead>
               <tr className="bg-gray-50/80">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rank</th>
-                {[{ label: 'Candidate', key: 'name' }, { label: 'Role', key: 'role' }].map(({ label, key }) => (
-                  <th key={key} onClick={() => handleSort(key)}
-                    className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
-                    <span className="inline-flex items-center gap-1">{label}
-                      {sortBy === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="opacity-30"> ↕</span>}
-                    </span>
-                  </th>
-                ))}
+                <th onClick={() => handleSort('name')}
+                  className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
+                  <span className="inline-flex items-center gap-1">Candidate
+                    {sortBy === 'name' ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="opacity-30"> ↕</span>}
+                  </span>
+                </th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registration No.</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Batch Name</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Batch Code</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Time ID</th>
+                <th onClick={() => handleSort('role')}
+                  className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
+                  <span className="inline-flex items-center gap-1">Role
+                    {sortBy === 'role' ? (sortDir === 'asc' ? ' ↑' : ' ↓') : <span className="opacity-30"> ↕</span>}
+                  </span>
+                </th>
                 {[{ label: 'Overall', key: 'overall_score' }, { label: 'Communication', key: 'communication' }, { label: 'Questions', key: 'questions' }, { label: 'Date', key: 'date' }].map(({ label, key }) => (
                   <th key={key} onClick={() => handleSort(key)}
                     className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-brand-purple select-none">
@@ -321,6 +363,10 @@ const ReportsPage = () => {
                         </div>
                       </div>
                     </td>
+                    <td className="px-5 py-3.5 text-sm text-gray-700">{report.registrationNumber || 'N/A'}</td>
+                    <td className="px-5 py-3.5 text-sm text-gray-700">{report.batchName || 'N/A'}</td>
+                    <td className="px-5 py-3.5 text-sm text-gray-700">{report.batchCode || 'N/A'}</td>
+                    <td className="px-5 py-3.5 text-sm text-gray-700">{report.timeId || 'N/A'}</td>
                     <td className="px-5 py-3.5">
                       <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md">{report.role || 'N/A'}</span>
                     </td>

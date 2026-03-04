@@ -15,33 +15,56 @@ const Transcript = mongoose.model(
 // GET /api/reports/srm — SRM interview reports (leaderboard list)
 const getSRMReports = async (req, res, next) => {
   try {
-    const reports = await CandidateSummary.find(
-      { email: { $regex: /@srmist\.edu\.in$/i } },
+    const reports = await CandidateSummary.aggregate([
+      { $match: { email: { $regex: /@srmist\.edu\.in$/i } } },
       {
-        name: 1,
-        email: 1,
-        interview_id: 1,
-        candidate_id: 1,
-        overall_score: 1,
-        technical: 1,
-        communication: 1,
-        behavioral: 1,
-        plagiarism: 1,
-        authenticity: 1,
-        duration: 1,
-        status: 1,
-        role: 1,
-        subcategory_name: 1,
-        exam_name: 1,
-        questions_count: 1,
-        started_at: 1,
-        completed_at: 1,
-        template_number: 1,
-        interview_data: 1,
-      }
-    )
-      .sort({ overall_score: -1 })
-      .lean();
+        $addFields: {
+          emailLower: { $toLower: '$email' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'studentmetadata',
+          localField: 'emailLower',
+          foreignField: 'emailId',
+          as: 'metadata'
+        }
+      },
+      {
+        $addFields: {
+          metadata: { $arrayElemAt: ['$metadata', 0] }
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          interview_id: 1,
+          candidate_id: 1,
+          overall_score: 1,
+          technical: 1,
+          communication: 1,
+          behavioral: 1,
+          plagiarism: 1,
+          authenticity: 1,
+          duration: 1,
+          status: 1,
+          role: 1,
+          subcategory_name: 1,
+          exam_name: 1,
+          questions_count: 1,
+          started_at: 1,
+          completed_at: 1,
+          template_number: 1,
+          interview_data: 1,
+          registrationNumber: '$metadata.registrationNumber',
+          batchName: '$metadata.batchName',
+          batchCode: '$metadata.batchCode',
+          timeId: '$metadata.timeId'
+        }
+      },
+      { $sort: { overall_score: -1 } }
+    ]);
 
     res.json({ success: true, count: reports.length, data: reports });
   } catch (error) {
@@ -96,21 +119,75 @@ const getSRMReportStats = async (req, res, next) => {
 const getReportDetail = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const report = await CandidateSummary.findById(id).lean();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid report id' });
+    }
+    const report = await CandidateSummary.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $addFields: {
+          emailLower: { $toLower: '$email' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'studentmetadata',
+          localField: 'emailLower',
+          foreignField: 'emailId',
+          as: 'metadata'
+        }
+      },
+      {
+        $addFields: {
+          metadata: { $arrayElemAt: ['$metadata', 0] }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          interview_id: 1,
+          candidate_id: 1,
+          overall_score: 1,
+          technical: 1,
+          communication: 1,
+          behavioral: 1,
+          plagiarism: 1,
+          authenticity: 1,
+          duration: 1,
+          status: 1,
+          role: 1,
+          subcategory_name: 1,
+          exam_name: 1,
+          questions_count: 1,
+          started_at: 1,
+          completed_at: 1,
+          template_number: 1,
+          interview_data: 1,
+          registrationNumber: '$metadata.registrationNumber',
+          batchName: '$metadata.batchName',
+          batchCode: '$metadata.batchCode',
+          timeId: '$metadata.timeId'
+        }
+      }
+    ]);
 
-    if (!report) {
+    if (!report || report.length === 0) {
       return res.status(404).json({ success: false, error: 'Report not found' });
     }
 
+    const reportData = report[0];
+
     // Try to get transcript
     let transcript = null;
-    if (report.interview_id) {
+    if (reportData.interview_id) {
       transcript = await Transcript.findOne({
-        interview_id: report.interview_id,
+        interview_id: reportData.interview_id,
       }).lean();
     }
 
-    res.json({ success: true, data: { ...report, transcript } });
+    res.json({ success: true, data: { ...reportData, transcript } });
   } catch (error) {
     next(error);
   }
