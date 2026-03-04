@@ -172,9 +172,9 @@ const ReportsPage = () => {
     });
 
     return result;
-  }, [reports, searchTerm, maxScore, statusFilter, roleFilter, sortBy]);
+  }, [reports, searchTerm, maxScore, statusFilter, roleFilter, batchFilter, codeFilter, sortBy, sortDir, dateFrom, dateTo]);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, maxScore, statusFilter, roleFilter, sortBy, sortDir, dateFrom, dateTo]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, maxScore, statusFilter, roleFilter, batchFilter, codeFilter, sortBy, sortDir, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -223,7 +223,7 @@ const ReportsPage = () => {
             <button onClick={() => { setSearchTerm(''); setMaxScore(100); setStatusFilter('all'); setRoleFilter('all'); setDateFrom(''); setDateTo(''); }} className="ml-auto text-xs text-brand-purple hover:text-brand-violet font-medium">Clear All</button>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search */}
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">Search</label>
@@ -252,6 +252,24 @@ const ReportsPage = () => {
               className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-brand-purple outline-none text-sm bg-white">
               <option value="all">All Roles</option>
               {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          {/* Batch Name */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Batch Name</label>
+            <select value={batchFilter} onChange={(e) => setBatchFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-brand-purple outline-none text-sm bg-white">
+              <option value="all">All Batches</option>
+              {batchNames.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          {/* Batch Code */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Batch Code</label>
+            <select value={codeFilter} onChange={(e) => setCodeFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-brand-purple outline-none text-sm bg-white">
+              <option value="all">All Codes</option>
+              {batchCodes.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
