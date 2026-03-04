@@ -179,12 +179,44 @@ const getReportDetail = async (req, res, next) => {
 
     const reportData = report[0];
 
+      // If session duration is longer than 60 minutes, do not return the detail
+      const parseMinutes = (d) => {
+        if (!d && d !== 0) return 0;
+        if (typeof d === 'number') return d;
+        const m = ('' + d).match(/(\d+)/);
+        return m ? parseInt(m[0], 10) : 0;
+      };
+      if (parseMinutes(reportData.duration) > 60) {
+        return res.status(404).json({ success: false, error: 'Report not available' });
+      }
+
     // Try to get transcript
     let transcript = null;
     if (reportData.interview_id) {
       transcript = await Transcript.findOne({
         interview_id: reportData.interview_id,
       }).lean();
+    }
+
+    // Remove organisation scores and question-type labels from interview_data before sending
+    if (reportData.interview_data && Array.isArray(reportData.interview_data)) {
+      reportData.interview_data = reportData.interview_data.map((q) => {
+        const copy = { ...q };
+        // remove question type labels
+        delete copy.category;
+        delete copy.templateCategory;
+        // remove organisation / organization scores from feedback if present
+        if (copy.feedback && typeof copy.feedback === 'object') {
+          const fb = { ...copy.feedback };
+          delete fb.organization;
+          delete fb.organisation;
+          delete fb.organizationScore;
+          delete fb.organisationScore;
+          // keep per-question overallScore so frontend can show the 8/10 badge
+          copy.feedback = fb;
+        }
+        return copy;
+      });
     }
 
     res.json({ success: true, data: { ...reportData, transcript } });

@@ -155,6 +155,15 @@ const ReportsPage = () => {
     }
 
     // Sort
+    // Remove unusually long sessions (more than 60 minutes)
+    const parseMinutes = (d) => {
+      if (!d && d !== 0) return 0;
+      if (typeof d === 'number') return d;
+      const m = ('' + d).match(/(\d+)/);
+      return m ? parseInt(m[0], 10) : 0;
+    };
+    result = result.filter((r) => parseMinutes(r.duration) <= 60);
+
     result.sort((a, b) => {
       let cmp = 0;
       if (sortBy === 'overall_score') cmp = (b.overall_score || 0) - (a.overall_score || 0);

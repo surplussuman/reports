@@ -81,7 +81,7 @@ const ReportDetailPage = () => {
 
   // Calculate average feedback scores from interview data
   const avgFeedbackScores = {};
-  const scoreFields = ['confidenceScore', 'ideasScore', 'organizationScore', 'accuracyScore', 'voiceScore', 'grammarScore', 'stopWordsScore', 'bodyLanguageScore', 'physicalAppearanceScore'];
+  const scoreFields = ['confidenceScore', 'ideasScore', 'accuracyScore', 'voiceScore', 'grammarScore', 'stopWordsScore', 'bodyLanguageScore', 'physicalAppearanceScore'];
   if (realQuestions.length > 0) {
     scoreFields.forEach((field) => {
       const vals = realQuestions.map((q) => q.feedback?.[field] || 0).filter((v) => v > 0);
@@ -167,12 +167,14 @@ const ReportDetailPage = () => {
             </div>
           </div>
 
-          {/* Detailed Feedback Scores */}
+          {/* Detailed Feedback Scores (organization removed) */}
           {Object.keys(avgFeedbackScores).length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
               <h3 className="text-base font-semibold text-gray-900 mb-4">Detailed Assessment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Object.entries(avgFeedbackScores).map(([key, val]) => {
+                  // skip organization if present
+                  if (key.toLowerCase().includes('organ')) return null;
                   const color = getScoreColor(val);
                   const label = key.replace('Score', '').replace(/([A-Z])/g, ' $1').trim();
                   return (
@@ -214,8 +216,8 @@ const ReportDetailPage = () => {
                         </span>
                         <p className="text-sm font-medium text-gray-900">{qa.question}</p>
                       </div>
+                      {/* show per-question overall score badge (keep) */}
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs bg-brand-light text-brand-purple px-2 py-1 rounded-md capitalize">{qa.category || qa.templateCategory || 'general'}</span>
                         {fb.overallScore > 0 && (
                           <span className={`text-xs px-2 py-1 rounded-md font-bold ${getScoreColor(fb.overallScore * 10).bg} ${getScoreColor(fb.overallScore * 10).text}`}>
                             {fb.overallScore}/10
@@ -259,13 +261,14 @@ const ReportDetailPage = () => {
                       )}
                     </div>
 
-                    {/* Score pills */}
-                    {fb.overallScore > 0 && (
+                    {/* Per-question score pills (excluding organization) */}
+                    {fb && fb.overallScore > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {[
                           { k: 'confidenceScore', l: 'Confidence' }, { k: 'ideasScore', l: 'Ideas' },
-                          { k: 'organizationScore', l: 'Organization' }, { k: 'accuracyScore', l: 'Accuracy' },
-                          { k: 'voiceScore', l: 'Voice' }, { k: 'grammarScore', l: 'Grammar' },
+                          { k: 'accuracyScore', l: 'Accuracy' }, { k: 'voiceScore', l: 'Voice' },
+                          { k: 'grammarScore', l: 'Grammar' }, { k: 'stopWordsScore', l: 'Stop Words' },
+                          { k: 'bodyLanguageScore', l: 'Body Language' }, { k: 'physicalAppearanceScore', l: 'Physical Appearance' },
                         ].map(({ k, l }) => fb[k] > 0 && (
                           <span key={k} className={`text-xs px-2 py-1 rounded-md font-medium ${getScoreColor(fb[k] * 10).bg} ${getScoreColor(fb[k] * 10).text}`}>
                             {l}: {fb[k]}/10
