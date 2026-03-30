@@ -238,13 +238,32 @@ const getSRMReportCount = async (req, res, next) => {
 };
 
 // ─── SRET Reports ────────────────────────────────────────────────────────────
+// Strategy: join candidatesummaries → sretStudentMetadata by email first,
+// then filter to only rows that matched. This covers ALL domains (@sret.edu.in,
+// @sriher.edu.in, gmail, etc.) as long as the email is in sretStudentMetadata.
+
+const SretStudentMeta = mongoose.model(
+  'SretStudentMeta',
+  new mongoose.Schema({}, { strict: false }),
+  'sretStudentMetadata'
+);
+
+// Helper — fetch all known SRET emails from metadata collection
+const getSRETEmailList = async () => {
+  const docs = await SretStudentMeta.find(
+    { emailId: { $exists: true, $ne: '' } },
+    { emailId: 1 }
+  ).lean();
+  return docs.map((d) => d.emailId.toLowerCase()).filter(Boolean);
+};
 
 // GET /api/reports/sret — SRET interview reports leaderboard
 const getSRETReports = async (req, res, next) => {
   try {
+    const sretEmails = await getSRETEmailList();
     const reports = await CandidateSummary.aggregate([
-      { $match: { email: { $regex: /@sret\.edu\.in$/i } } },
       { $addFields: { emailLower: { $toLower: '$email' } } },
+      { $match: { emailLower: { $in: sretEmails } } },
       {
         $lookup: {
           from: 'sretStudentMetadata',
@@ -276,8 +295,10 @@ const getSRETReports = async (req, res, next) => {
 // GET /api/reports/sret/stats
 const getSRETReportStats = async (req, res, next) => {
   try {
+    const sretEmails = await getSRETEmailList();
     const stats = await CandidateSummary.aggregate([
-      { $match: { email: { $regex: /@sret\.edu\.in$/i } } },
+      { $addFields: { emailLower: { $toLower: '$email' } } },
+      { $match: { emailLower: { $in: sretEmails } } },
       {
         $group: {
           _id: null,
@@ -306,8 +327,13 @@ const getSRETReportStats = async (req, res, next) => {
 // GET /api/reports/count/sret
 const getSRETReportCount = async (req, res, next) => {
   try {
-    const count = await CandidateSummary.countDocuments({ email: { $regex: /@sret\.edu\.in$/i } });
-    res.json({ success: true, count });
+    const sretEmails = await getSRETEmailList();
+    const count = await CandidateSummary.aggregate([
+      { $addFields: { emailLower: { $toLower: '$email' } } },
+      { $match: { emailLower: { $in: sretEmails } } },
+      { $count: 'total' },
+    ]);
+    res.json({ success: true, count: count[0]?.total || 0 });
   } catch (error) {
     next(error);
   }
