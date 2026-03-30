@@ -23,12 +23,34 @@ export const fetchSRMStats = async () => {
   return data;
 };
 
+export const fetchSRETStudents = async () => {
+  const { data } = await api.get('/ats/sret');
+  return data;
+};
+
+export const fetchSRETCount = async () => {
+  const { data } = await api.get('/ats/count/sret');
+  return data;
+};
+
+export const fetchSRETStats = async () => {
+  const { data } = await api.get('/ats/stats/sret');
+  return data;
+};
+
+export const fetchATSStudentsByCollege = (college) =>
+  college === 'sret' ? fetchSRETStudents() : fetchSRMStudents();
+export const fetchATSCountByCollege = (college) =>
+  college === 'sret' ? fetchSRETCount() : fetchSRMCount();
+export const fetchATSStatsByCollege = (college) =>
+  college === 'sret' ? fetchSRETStats() : fetchSRMStats();
+
 export const fetchColleges = async () => {
   const { data } = await api.get('/colleges');
   return data;
 };
 
-// Interview Reports APIs
+// ── SRM KTR Reports ──
 export const fetchSRMReports = async () => {
   const { data } = await api.get('/reports/srm');
   return data;
@@ -42,6 +64,33 @@ export const fetchSRMReportStats = async () => {
 export const fetchSRMReportCount = async () => {
   const { data } = await api.get('/reports/count/srm');
   return data;
+};
+
+// ── SRET Reports ──
+export const fetchSRETReports = async () => {
+  const { data } = await api.get('/reports/sret');
+  return data;
+};
+
+export const fetchSRETReportStats = async () => {
+  const { data } = await api.get('/reports/sret/stats');
+  return data;
+};
+
+export const fetchSRETReportCount = async () => {
+  const { data } = await api.get('/reports/count/sret');
+  return data;
+};
+
+// ── College-aware helpers (auto-select based on college key) ──
+export const fetchReportsByCollege = (college) => {
+  if (college === 'sret') return fetchSRETReports();
+  return fetchSRMReports();
+};
+
+export const fetchReportStatsByCollege = (college) => {
+  if (college === 'sret') return fetchSRETReportStats();
+  return fetchSRMReportStats();
 };
 
 export const fetchATSDetail = async (id) => {

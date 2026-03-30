@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchSRMReports, fetchSRMReportStats } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { fetchReportsByCollege, fetchReportStatsByCollege } from '../services/api';
 import Loader from '../components/Loader';
 import ExportDropdown from '../components/ExportDropdown';
 import { exportReportsToPDF, exportReportsToExcel, exportReportsToCSV } from '../utils/exportUtils';
@@ -31,15 +32,28 @@ const getStatusBadge = (status) => {
   return { bg: 'bg-gray-100', text: 'text-gray-700', label: status || 'Unknown' };
 };
 
-// Module-level cache — survives component unmounts (back navigation)
-let _reportsCache = null;
-let _statsCache = null;
+// localStorage-backed cache keyed by college
+const getReportsCache = (college) => {
+  try {
+    const raw = localStorage.getItem(`reports_cache_${college}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+const setReportsCache = (college, reports, stats) => {
+  try {
+    localStorage.setItem(`reports_cache_${college}`, JSON.stringify({ reports, stats }));
+  } catch {}
+};
 
 const ReportsPage = () => {
   const navigate = useNavigate();
-  const [reports, setReports] = useState(_reportsCache || []);
-  const [stats, setStats] = useState(_statsCache || null);
-  const [loading, setLoading] = useState(!_reportsCache);
+  const { user } = useAuth();
+  const college = user?.college || 'srmktr';
+
+  const _init = getReportsCache(college);
+  const [reports, setReports] = useState(_init?.reports || []);
+  const [stats, setStats] = useState(_init?.stats || null);
+  const [loading, setLoading] = useState(!_init);
   const [error, setError] = useState(null);
   const [batchFilter, setBatchFilter] = useState('all');
   const [codeFilter, setCodeFilter] = useState('all');
@@ -66,22 +80,23 @@ const ReportsPage = () => {
   };
 
   useEffect(() => {
-    // If cache already exists, nothing to do — data and loading=false already set via useState init
-    if (_reportsCache) return;
+    // If cache already exists for this college, nothing to do
+    if (getReportsCache(college)) return;
     loadData();
-  }, []);
+  }, [college]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [reportsRes, statsRes] = await Promise.all([
-        fetchSRMReports(),
-        fetchSRMReportStats(),
+        fetchReportsByCollege(college),
+        fetchReportStatsByCollege(college),
       ]);
-      _reportsCache = reportsRes.data || [];
-      _statsCache = statsRes.data || null;
-      setReports(_reportsCache);
-      setStats(_statsCache);
+      const reps = reportsRes.data || [];
+      const st = statsRes.data || null;
+      setReportsCache(college, reps, st);
+      setReports(reps);
+      setStats(st);
     } catch (err) {
       setError(err.message);
     } finally {

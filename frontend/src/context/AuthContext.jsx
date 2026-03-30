@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { _atsCache } from '../utils/cache';
 
 const AuthContext = createContext(null);
 
@@ -48,6 +49,13 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('ats_token');
+    // Clear all data caches on logout
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('reports_cache_') || key.startsWith('ats_cache_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    _atsCache.data = null;   // clear module-level ATS cache
     delete api.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);

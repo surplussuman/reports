@@ -1,6 +1,6 @@
 const ResumeAnalysis = require('../models/ResumeAnalysis');
 
-// GET /api/ats/srm — SRM students with ATS data
+// GET /api/ats/srm — SRM students with ATS data (list view only — minimal fields)
 const getSRMStudents = async (req, res, next) => {
   try {
     const students = await ResumeAnalysis.find(
@@ -8,27 +8,7 @@ const getSRMStudents = async (req, res, next) => {
       {
         candidateName: 1,
         candidateEmail: 1,
-        interviewSessionId: 1,
-        fileName: 1,
         'analysis.atsScore': 1,
-        'analysis.sectionRatings': 1,
-        'analysis.strengths': 1,
-        'analysis.areasForImprovement': 1,
-        'analysis.skills': 1,
-        'analysis.experienceSummary': 1,
-        'analysis.comprehensiveSummary': 1,
-        'analysis.feedback': 1,
-        'structuredData.name': 1,
-        'structuredData.email': 1,
-        'structuredData.phone': 1,
-        'structuredData.location': 1,
-        'structuredData.linkedin': 1,
-        'structuredData.skills': 1,
-        'structuredData.workExperience': 1,
-        'structuredData.education': 1,
-        'structuredData.certifications': 1,
-        'structuredData.aiSummary': 1,
-        'structuredData.professionalSummary': 1,
         analyzedAt: 1,
       }
     )
@@ -130,4 +110,57 @@ const getATSDetail = async (req, res, next) => {
   }
 };
 
-module.exports = { getSRMStudents, getSRMCount, getSRMStats, getColleges, getATSDetail };
+// ── SRET ATS endpoints ──
+
+const getSRETStudents = async (req, res, next) => {
+  try {
+    const students = await ResumeAnalysis.find(
+      { candidateEmail: { $regex: /@sret\.edu\.in$/i } },
+      { candidateName: 1, candidateEmail: 1, 'analysis.atsScore': 1, analyzedAt: 1 }
+    )
+      .sort({ 'analysis.atsScore': -1 })
+      .lean();
+    res.json({ success: true, count: students.length, data: students });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getSRETCount = async (req, res, next) => {
+  try {
+    const count = await ResumeAnalysis.countDocuments({
+      candidateEmail: { $regex: /@sret\.edu\.in$/i },
+    });
+    res.json({ success: true, count });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getSRETStats = async (req, res, next) => {
+  try {
+    const stats = await ResumeAnalysis.aggregate([
+      { $match: { candidateEmail: { $regex: /@sret\.edu\.in$/i } } },
+      {
+        $group: {
+          _id: null,
+          totalStudents: { $sum: 1 },
+          avgScore: { $avg: '$analysis.atsScore' },
+          maxScore: { $max: '$analysis.atsScore' },
+          minScore: { $min: '$analysis.atsScore' },
+          above80: { $sum: { $cond: [{ $gte: ['$analysis.atsScore', 80] }, 1, 0] } },
+          above60: { $sum: { $cond: [{ $gte: ['$analysis.atsScore', 60] }, 1, 0] } },
+          below40: { $sum: { $cond: [{ $lt:  ['$analysis.atsScore', 40] }, 1, 0] } },
+        },
+      },
+    ]);
+    res.json({
+      success: true,
+      data: stats[0] || { totalStudents: 0, avgScore: 0, maxScore: 0, minScore: 0, above80: 0, above60: 0, below40: 0 },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getSRMStudents, getSRMCount, getSRMStats, getColleges, getATSDetail, getSRETStudents, getSRETCount, getSRETStats };

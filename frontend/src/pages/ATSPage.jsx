@@ -4,15 +4,20 @@ import FilterBar from '../components/FilterBar';
 import StudentTable from '../components/StudentTable';
 import ExportDropdown from '../components/ExportDropdown';
 import Loader from '../components/Loader';
-import { fetchSRMStudents, fetchSRMCount, fetchSRMStats } from '../services/api';
+import { fetchATSStudentsByCollege, fetchATSCountByCollege, fetchATSStatsByCollege } from '../services/api';
 import { exportATSToPDF, exportATSToExcel, exportATSToCSV } from '../utils/exportUtils';
 import { HiOutlineSparkles } from 'react-icons/hi';
+import { useAuth } from '../context/AuthContext';
+import { _atsCache } from '../utils/cache';
 
 const ATSPage = () => {
-  const [students, setStudents] = useState([]);
-  const [count, setCount] = useState(0);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const college = user?.college || 'srmktr';
+
+  const [students, setStudents] = useState(_atsCache.data?.[college]?.students || []);
+  const [count, setCount] = useState(_atsCache.data?.[college]?.count || 0);
+  const [stats, setStats] = useState(_atsCache.data?.[college]?.stats || null);
+  const [loading, setLoading] = useState(!_atsCache.data?.[college]);
   const [error, setError] = useState(null);
 
   // Filters
@@ -26,21 +31,26 @@ const ATSPage = () => {
   // Removed: selectedStudent state & modal — View Details now opens /ats/:id in a new tab
 
   useEffect(() => {
+    if (_atsCache.data?.[college]) return;
     loadData();
-  }, []);
+  }, [college]);
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
       const [studentsRes, countRes, statsRes] = await Promise.all([
-        fetchSRMStudents(),
-        fetchSRMCount(),
-        fetchSRMStats(),
+        fetchATSStudentsByCollege(college),
+        fetchATSCountByCollege(college),
+        fetchATSStatsByCollege(college),
       ]);
-      setStudents(studentsRes.data || []);
-      setCount(countRes.count || 0);
-      setStats(statsRes.data || null);
+      const students = studentsRes.data || [];
+      const count = countRes.count || 0;
+      const stats = statsRes.data || null;
+      _atsCache.data = { ..._atsCache.data, [college]: { students, count, stats } };
+      setStudents(students);
+      setCount(count);
+      setStats(stats);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError(err.message || 'Failed to load dashboard data');

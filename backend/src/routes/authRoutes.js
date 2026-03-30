@@ -1,16 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
-// Hardcoded credentials
-const VALID_USER = {
-  username: 'srmktr',
-  password: 'sk5Fe@y3Hqk',
-  name: 'Administrator',
-};
+// Supported users — each entry has username, password, display name, college key
+const USERS = [
+  { username: 'srmktr', password: 'sk5Fe@y3Hqk', name: 'SRM KTR Administrator', college: 'srmktr' },
+  { username: 'sret',   password: 'Sr3t@2026!',  name: 'SRET Administrator',    college: 'sret'   },
+];
 
 // Simple token (base64 encoded, no external JWT library needed)
-const generateToken = (username) => {
-  const payload = { username, iat: Date.now(), exp: Date.now() + 24 * 60 * 60 * 1000 };
+const generateToken = (username, college) => {
+  const payload = { username, college, iat: Date.now(), exp: Date.now() + 24 * 60 * 60 * 1000 };
   return Buffer.from(JSON.stringify(payload)).toString('base64');
 };
 
@@ -27,16 +26,15 @@ const verifyToken = (token) => {
 // POST /api/auth/login
 router.post('/auth/login', (req, res) => {
   const { username, password } = req.body;
-
-  if (username === VALID_USER.username && password === VALID_USER.password) {
-    const token = generateToken(username);
+  const match = USERS.find((u) => u.username === username && u.password === password);
+  if (match) {
+    const token = generateToken(match.username, match.college);
     return res.json({
       success: true,
       token,
-      user: { username: VALID_USER.username, name: VALID_USER.name },
+      user: { username: match.username, name: match.name, college: match.college },
     });
   }
-
   return res.status(401).json({ success: false, error: 'Invalid username or password' });
 });
 
@@ -51,9 +49,11 @@ router.get('/auth/verify', (req, res) => {
   if (!payload) {
     return res.status(401).json({ success: false, error: 'Invalid or expired token' });
   }
+  const match = USERS.find((u) => u.username === payload.username);
+  if (!match) return res.status(401).json({ success: false, error: 'User not found' });
   return res.json({
     success: true,
-    user: { username: VALID_USER.username, name: VALID_USER.name },
+    user: { username: match.username, name: match.name, college: match.college },
   });
 });
 

@@ -237,9 +237,88 @@ const getSRMReportCount = async (req, res, next) => {
   }
 };
 
+// ─── SRET Reports ────────────────────────────────────────────────────────────
+
+// GET /api/reports/sret — SRET interview reports leaderboard
+const getSRETReports = async (req, res, next) => {
+  try {
+    const reports = await CandidateSummary.aggregate([
+      { $match: { email: { $regex: /@sret\.edu\.in$/i } } },
+      { $addFields: { emailLower: { $toLower: '$email' } } },
+      {
+        $lookup: {
+          from: 'sretStudentMetadata',
+          localField: 'emailLower',
+          foreignField: 'emailId',
+          as: 'metadata',
+        },
+      },
+      { $addFields: { metadata: { $arrayElemAt: ['$metadata', 0] } } },
+      {
+        $project: {
+          name: 1, email: 1, interview_id: 1, candidate_id: 1,
+          overall_score: 1, technical: 1, communication: 1, behavioral: 1,
+          plagiarism: 1, authenticity: 1, duration: 1, status: 1, role: 1,
+          subcategory_name: 1, exam_name: 1, questions_count: 1,
+          started_at: 1, completed_at: 1, template_number: 1, interview_data: 1,
+          batchName: '$metadata.batchName',
+          batchCode: '$metadata.batchCode',
+        },
+      },
+      { $sort: { overall_score: -1 } },
+    ]);
+    res.json({ success: true, count: reports.length, data: reports });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/reports/sret/stats
+const getSRETReportStats = async (req, res, next) => {
+  try {
+    const stats = await CandidateSummary.aggregate([
+      { $match: { email: { $regex: /@sret\.edu\.in$/i } } },
+      {
+        $group: {
+          _id: null,
+          totalInterviews: { $sum: 1 },
+          avgOverall: { $avg: '$overall_score' },
+          avgTechnical: { $avg: '$technical' },
+          avgCommunication: { $avg: '$communication' },
+          avgQuestionsCount: { $avg: '$questions_count' },
+          shortlisted: { $sum: { $cond: [{ $eq: ['$status', 'shortlisted'] }, 1, 0] } },
+          completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+          maxScore: { $max: '$overall_score' },
+          minScore: { $min: '$overall_score' },
+        },
+      },
+    ]);
+    const result = stats[0] || {
+      totalInterviews: 0, avgOverall: 0, avgTechnical: 0, avgCommunication: 0,
+      avgQuestionsCount: 0, shortlisted: 0, completed: 0, maxScore: 0, minScore: 0,
+    };
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/reports/count/sret
+const getSRETReportCount = async (req, res, next) => {
+  try {
+    const count = await CandidateSummary.countDocuments({ email: { $regex: /@sret\.edu\.in$/i } });
+    res.json({ success: true, count });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getSRMReports,
   getSRMReportStats,
   getReportDetail,
   getSRMReportCount,
+  getSRETReports,
+  getSRETReportStats,
+  getSRETReportCount,
 };
