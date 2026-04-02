@@ -114,13 +114,34 @@ const getATSDetail = async (req, res, next) => {
 
 const getSRETStudents = async (req, res, next) => {
   try {
-    const students = await ResumeAnalysis.find(
-      { candidateEmail: { $regex: /@sret\.edu\.in$/i } },
+    // Get all known SRET emails from metadata
+    const SretMeta = mongoose.model('SretMeta', new mongoose.Schema({}, { strict: false }), 'sretStudentMetadata');
+    const metaDocs = await SretMeta.find({ emailId: { $exists: true, $ne: '' } }, { emailId: 1, name: 1 }).lean();
+    const sretEmails = metaDocs.map((d) => d.emailId.toLowerCase()).filter(Boolean);
+
+    // Fetch any ResumeAnalysis records for these emails
+    const found = await ResumeAnalysis.find(
+      { candidateEmail: { $in: sretEmails } },
       { candidateName: 1, candidateEmail: 1, 'analysis.atsScore': 1, analyzedAt: 1 }
-    )
-      .sort({ 'analysis.atsScore': -1 })
-      .lean();
-    res.json({ success: true, count: students.length, data: students });
+    ).lean();
+
+    // Map found by lowercased email
+    const foundMap = new Map(found.map((f) => [String(f.candidateEmail).toLowerCase(), f]));
+
+    // For emails not found in ResumeAnalysis, create placeholder entries from metadata
+    const placeholders = metaDocs
+      .filter((m) => !foundMap.has(String(m.emailId).toLowerCase()))
+      .map((m) => ({ candidateName: m.name || '', candidateEmail: m.emailId, analysis: { atsScore: null }, analyzedAt: null }));
+
+    // Combine and sort: existing records first by score, then placeholders at the end
+    const combined = found.concat(placeholders);
+    combined.sort((a, b) => {
+      const sa = (a.analysis && a.analysis.atsScore) || 0;
+      const sb = (b.analysis && b.analysis.atsScore) || 0;
+      return sb - sa;
+    });
+
+    res.json({ success: true, count: combined.length, data: combined });
   } catch (error) {
     next(error);
   }
