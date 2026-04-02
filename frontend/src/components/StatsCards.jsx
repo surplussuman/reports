@@ -4,7 +4,7 @@ import { HiOutlineUsers, HiOutlineChartBar, HiOutlineCheckCircle, HiOutlineTrend
 const StatsCards = ({ stats, count }) => {
   const cards = [
     {
-      title: 'Total SRM Students',
+      title: 'Total Students',
       value: count || 0,
       subtitle: 'With ATS Reports',
       icon: HiOutlineUsers,
