@@ -75,9 +75,9 @@ const StudentTable = ({ students, currentPage, setCurrentPage, totalPages, onVie
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => onViewDetails(student)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium
-                        text-brand-purple bg-brand-light hover:bg-brand-purple hover:text-white
-                        transition-all duration-200 group-hover:shadow-sm"
+                      disabled={!student._id}
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group-hover:shadow-sm
+                        ${student._id ? 'text-brand-purple bg-brand-light hover:bg-brand-purple hover:text-white' : 'text-gray-400 bg-gray-50 cursor-not-allowed'}`}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

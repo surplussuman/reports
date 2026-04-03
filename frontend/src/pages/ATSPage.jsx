@@ -159,7 +159,16 @@ const ATSPage = () => {
               currentPage={currentPage}
               setCurrentPage={setCurrentPage}
               totalPages={totalPages}
-              onViewDetails={(s) => window.open('/ats/' + s._id, '_blank')}
+              onViewDetails={(s) => {
+                if (s && s._id) {
+                  window.open('/ats/' + s._id, '_blank');
+                } else {
+                  // No ResumeAnalysis record exists for this student — show informative message
+                  // Score shows as 0 when analysis is missing (frontend computes `|| 0`)
+                  // so avoid requesting detail by id=undefined which causes backend cast error
+                  alert('No detailed ATS analysis available for this student. The ATS score is shown as 0 because no analysis record exists.');
+                }
+              }}
             />
           </>
         )}
