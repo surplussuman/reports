@@ -1,4 +1,7 @@
+const mongoose = require('mongoose');
 const ResumeAnalysis = require('../models/ResumeAnalysis');
+
+// Use native collection access for sretStudentMetadata to avoid compiling ad-hoc models
 
 // GET /api/ats/srm — SRM students with ATS data (list view only — minimal fields)
 const getSRMStudents = async (req, res, next) => {
@@ -115,9 +118,11 @@ const getATSDetail = async (req, res, next) => {
 const getSRETStudents = async (req, res, next) => {
   try {
     // Get all known SRET emails from metadata
-    const SretMeta = mongoose.model('SretMeta', new mongoose.Schema({}, { strict: false }), 'sretStudentMetadata');
-    const metaDocs = await SretMeta.find({ emailId: { $exists: true, $ne: '' } }, { emailId: 1, name: 1 }).lean();
-    const sretEmails = metaDocs.map((d) => d.emailId.toLowerCase()).filter(Boolean);
+    const metaCollection = mongoose.connection.db.collection('sretStudentMetadata');
+    const metaDocs = await metaCollection
+      .find({ emailId: { $exists: true, $ne: '' } }, { projection: { emailId: 1, name: 1 } })
+      .toArray();
+    const sretEmails = metaDocs.map((d) => String(d.emailId).toLowerCase()).filter(Boolean);
 
     // Fetch any ResumeAnalysis records for these emails
     const found = await ResumeAnalysis.find(

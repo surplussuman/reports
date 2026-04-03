@@ -1,12 +1,13 @@
 const mongoose = require('mongoose');
 
-const CandidateSummary = mongoose.model(
+// Reuse compiled models if present to avoid model overwrite errors on reload
+const CandidateSummary = mongoose.models.CandidateSummary || mongoose.model(
   'CandidateSummary',
   new mongoose.Schema({}, { strict: false }),
   'candidatesummaries'
 );
 
-const Transcript = mongoose.model(
+const Transcript = mongoose.models.Transcript || mongoose.model(
   'Transcript',
   new mongoose.Schema({}, { strict: false }),
   'transcripts'
@@ -242,7 +243,7 @@ const getSRMReportCount = async (req, res, next) => {
 // then filter to only rows that matched. This covers ALL domains (@sret.edu.in,
 // @sriher.edu.in, gmail, etc.) as long as the email is in sretStudentMetadata.
 
-const SretStudentMeta = mongoose.model(
+const SretStudentMeta = mongoose.models.SretStudentMeta || mongoose.model(
   'SretStudentMeta',
   new mongoose.Schema({}, { strict: false }),
   'sretStudentMetadata'
